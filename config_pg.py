@@ -1,8 +1,7 @@
 DATA_DIR_PATH = r"C:\Users\Lenovo\PycharmProjects\boomlive\theDataset.csv"
 VECTOR_DB_PATH = "D:\jupyter projects\FaissLocalEmbedding"
-EMBEDDER = "embed-english-v3.0"
+EMBEDDER = "mixedbread-ai/mxbai-embed-large-v1"
 DEVICE = "cpu"
-SYSTEM_PROMPT_TEMPLATE_="You are an AI assistant helping to reformulate user queries for a retrieval system.Your task is to reformulate the user's latest question.When reformulating, ensure the query is detailed enough for someone without knowledge of the conversation to understand what information is being sought."
 
 SYSTEM_PROMPT_TEMPLATE_1 ="""
 You are an AI assistant helping to reformulate user queries for a retrieval system.
@@ -20,8 +19,12 @@ Follow these steps:
 
 
 When reformulating, ensure the query is detailed enough for someone without knowledge of the conversation to understand what information is being sought.
-Important: The output should be only the original question (if standalone) or the reformulated question as plain text, without any additional words, delimiters, or formatting.
-The chat history is delimited by triple backticks and the user's latest question is delimited by angle brackets.
+
+CRITICAL: Your output must consist ONLY of the original question (if standalone) or the reformulated question.
+Do not include any explanations, introductions, or additional text.
+The output should be a single line of text without any formatting or delimiters.
+
+The chat history is delimited by triple backticks and the user's latest question is delimited by angle brackets."
 """
 
 HUMAN_PROMPT_TEMPLATE_1 = """
@@ -31,6 +34,8 @@ Chat History:
 
 User's Latest Question: <{user_question}>
 
+
+Provide the appropriate query as a single line of text without any additional words or explanations.
 """
 
 
@@ -47,7 +52,14 @@ You are an AI assistant for question-answering tasks. Your role is to provide ac
 8. If appropriate, use bullet points or numbered lists for clarity.
 9. The user's latest question is delimited by angle brackets.
 10. After generating your response, critically evaluate whether you used information from the provided context to answer the question.
-
+11. If you determine that your response was generated using the provided context, include the source at the end of your response as a hyperlink on the same line. Format it as follows: 
+    - Extract the domain from the source URL (e.g., 'example.com' from 'https://www.example.com/page')
+    - Create a Markdown hyperlink using the domain as the anchor text
+    - Enclose the entire hyperlink in parentheses
+    - Add a space before the parentheses to separate it from the last sentence
+    - Example: If the source is (https://www.example.com/page), your response should end like this: ... end of your response. ([example.com](https://www.example.com/page))
+12. Do not include the source if you determine that your response was not based on the provided context or if it's a general response (e.g., to a thank you message).
+13. The source can be found delimited by parantheses.
 
 Remember, accuracy and relevance are key. Base your response solely on the provided information.
 
@@ -62,12 +74,12 @@ User's Question: <{user_question}>
 Please provide an answer based on the given context and considering the chat history if relevant.
 """
 
-COLLECTION_NAME = "my_docs"
+COLLECTION_NAME = "my_docs_2"
 INP_VARS = ['context', 'question']
-CHAIN_TYPE = "stuff"
-SEARCH_KWARGS = {'k': 20}
+CHAIN_TYPE = "stuff"                                    
+SEARCH_KWARGS = {'k': 5}
 MODEL_CKPT = "/home/sets/PycharmProjects/llm/mistral_chatbot/llama-2-7b-chat.ggmlv3.q3_K_S.bin"
 MODEL_TYPE = "gemini-1.5-flash"
 MAX_NEW_TOKENS = 512
 TEMPERATURE = 0
-CONNECTION_STRING = "postgresql+psycopg2://postgres:sets1234@localhost/Madhav_db"
+CONNECTION_STRING = "postgresql+psycopg2://postgres:sets1234@172.24.18.37:5432/Madhav_db"
