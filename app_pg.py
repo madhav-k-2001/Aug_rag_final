@@ -1,15 +1,11 @@
-import os
-
 import streamlit as st
 from dotenv import load_dotenv
-from langsmith import Client
+from langchain_core.callbacks.base import BaseCallbackHandler
 from streamlit_feedback import streamlit_feedback
 
 from config_pg import *
 from edubot_pg import EduBotCreator
-load_dotenv()
-import uuid
-client = Client(api_url=os.getenv("LANGCHAIN_ENDPOINT"), api_key=os.getenv("LANGCHAIN_API_KEY"))
+
 
 def create_edubot():
     edubotcreator = EduBotCreator()
@@ -26,10 +22,11 @@ def handle_userinput(user_question):
         full_response += chunk.content
         yield chunk.content
 
-    st.session_state.chat_history.append({"role": "user", "content": user_question})
+    st.session_state.chat_history.append({"role": "human", "content": user_question})
     st.session_state.chat_history.append({"role": "assistant", "content": full_response})
     
-
+def storenprintfb(dic):
+    print(dic)
 
 def main():
 
@@ -43,10 +40,6 @@ def main():
 
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
-
-    if "run_id" not in st.session_state:
-        st.session_state['run_id'] = ""
-
 
     for message in st.session_state.chat_history:
         with st.chat_message(message["role"]):
@@ -62,26 +55,8 @@ def main():
 
         with st.chat_message("assistant"):
             st.write_stream(handle_userinput(user_question))
-            st.session_state['run_id'] = uuid.uuid4()
-
-            if st.session_state.get("run_id"):
-                print(st.session_state.get("run_id"))
-
-                feedback = streamlit_feedback(
-                    feedback_type="faces",  # Apply the selected feedback style
-                    optional_text_label="[Optional] Please provide an explanation",  # Allow for additional comments
-                    key=f"feedback_{st.session_state.run_id}",
-                )
-                print(feedback)
-                
-
-
-
-
-
-
-
         
+        streamlit_feedback(feedback_type="faces", optional_text_label="provide your feedback", on_submit=storenprintfb)
         # Keep only the latest 2 sets of conversation in the chat history
         st.session_state.chat_history = st.session_state.chat_history[-6:]
 

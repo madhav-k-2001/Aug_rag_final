@@ -1,21 +1,32 @@
 # from langchain_community.llms import Ollama
 # from langchain.chains import create_retrieval_chain
 # from langchain.chains.combine_documents import create_stuff_documents_chain
-import dotenv
+from langchain_google_genai import (
+    ChatGoogleGenerativeAI,
+    HarmBlockThreshold,
+    HarmCategory,
+)
+from langchain_mixedbread_ai import MixedbreadAIRerank
+
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.cross_encoders import HuggingFaceCrossEncoder
+from langchain.retrievers.document_compressors import CrossEncoderReranker
 from operator import itemgetter
 import streamlit as st
-from langchain_cohere import CohereEmbeddings, CohereRerank, ChatCohere
-from langchain_community.chat_models import ChatOllama
-from langchain_community.llms.ollama import Ollama
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from langchain_cohere import (
+    CohereEmbeddings,   
+    CohereRerank,
+    # ChatCohere
+)
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    MessagesPlaceholder, 
+    SystemMessagePromptTemplate, 
+    HumanMessagePromptTemplate
+)
 from langchain_postgres import PGVector
 from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
-# from langchain_google_genai import (
-#     ChatGoogleGenerativeAI,
-#     HarmBlockThreshold,
-#     HarmCategory,
-# )
-
+from langchain_groq import ChatGroq
 
 from config_pg import *
 
@@ -55,7 +66,7 @@ class EduBotCreator:
         formatted_docs = []
         for doc in docs:
             # Format each document's page content and metadata
-            formatted_doc = f"context:\n```\n{doc.page_content}\n```\nsource:\n({doc.metadata})"
+            formatted_doc = f"context:\n```\n{doc.page_content}\n```\nsource:\n({doc.metadata['source']})"
             formatted_docs.append(formatted_doc)
         # Join all formatted documents with two newlines
         return "\n\n".join(formatted_docs)
@@ -73,12 +84,12 @@ class EduBotCreator:
             if message["role"] == "human":
                 formatted += f"Human: {message['content']}\n"
             elif message["role"] == "assistant":
-                formatted += f"Assistant: {message['content']}\n"
+                formatted += f"Assistant: {message['content']}\n\n"
         return formatted.strip()
 
     def create_history_aware_retriever(self):
         try:
-            history_aware_retriever = self.chat_prompt_1 | self.llm | self.format_content | self.compression_retriever
+            history_aware_retriever = self.chat_prompt_1 | self.llm | self.format_content | self.retriever
             return history_aware_retriever
         except Exception as e:
             st.error(f"error creating history aware retriever: {e}")
@@ -97,39 +108,38 @@ class EduBotCreator:
 
     def load_llm(self):
         # llm = ChatGoogleGenerativeAI(model=self.model_type, temperature=self.temperature, safety_settings={
-        #     # HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-        #     # HarmCategory.HARM_CATEGORY_HARASSMENT : HarmBlockThreshold.BLOCK_NONE,
-        #     # HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT : HarmBlockThreshold.BLOCK_NONE,
-        #     # HarmCategory.HARM_CATEGORY_HATE_SPEECH : HarmBlockThreshold.BLOCK_NONE
-        #
+        #     HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+        #     HarmCategory.HARM_CATEGORY_HARASSMENT : HarmBlockThreshold.BLOCK_NONE,
+        #     HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT : HarmBlockThreshold.BLOCK_NONE,
+        #     HarmCategory.HARM_CATEGORY_HATE_SPEECH : HarmBlockThreshold.BLOCK_NONE
+        
         # })
-        #llm = ChatOllama(model="llama3",num_gpu=15)
-        llm = ChatCohere(cohere_api_key = "rpFqYXPRZPaW3rOw3s3td5ioPqFCkOuDL80e4qMN")
+        llm = ChatGroq(
+            model = "llama-3.1-70b-versatile",
+            # model="llama-3.1-8b-instant",
+            # model = "llama3-70b-8192",
+            # model = "llama3-8b-8192",
+            temperature = 0,
+        )        
+        # llm = ChatCohere(temperature=0)
         return llm
     
     def load_vectorstore(self):
-        embeddings = CohereEmbeddings(cohere_api_key = "rpFqYXPRZPaW3rOw3s3td5ioPqFCkOuDL80e4qMN",
-                            model=self.embedder,
-                        )
-
-        # vectorstore = FAISS.load_local(self.vectorstore_path, embeddings)
+        embeddings = CohereEmbeddings(model="embed-english-v3.0")
+        # embeddings = HuggingFaceEmbeddings(
+        #                     model_name = self.embedder,
+        #                     model_kwargs = {'trust_remote_code': True}
+        #                 )
         vectorstore = PGVector.from_existing_index(collection_name=self.collection_name,embedding=embeddings,connection=self.connection_string,)
         return vectorstore
     
-    def create_compression_retriever(self):
-        compressor = CohereRerank(cohere_api_key = "rpFqYXPRZPaW3rOw3s3td5ioPqFCkOuDL80e4qMN",model="rerank-english-v3.0",top_n=1)
-        compression_retriever = ContextualCompressionRetriever(
-        base_compressor=compressor, base_retriever=self.retriever
-        )
-        return compression_retriever
 
     def create_edubot(self):
         self.chat_prompt_1 = self.create_chat_prompt_1()
         self.chat_prompt_2 = self.create_chat_prompt_2()
         self.vectorstore = self.load_vectorstore()
         self.llm = self.load_llm()
-        self.retriever = self.vectorstore.as_retriever(search_type="similarity", search_kwargs=self.search_kwargs,)
-        self.compression_retriever = self.create_compression_retriever()
+        self.retriever = self.vectorstore.as_retriever(search_type="similarity", search_kwargs=self.search_kwargs)
         self.history_aware_retriever = self.create_history_aware_retriever()
         self.bot = self.create_bot()
         return self.bot
