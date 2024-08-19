@@ -1,0 +1,15 @@
+pypdf
+langchain
+torch
+accelerate
+bitsandbytes
+transformers
+ctransformers
+sentence_transformers
+faiss_cpu
+streamlit
+streamlit_feedback
+python-dotenv
+langchain_cohere
+langchain_postgres
+psycopg2
