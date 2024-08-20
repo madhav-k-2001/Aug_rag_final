@@ -1,13 +1,12 @@
 # from langchain_community.llms import Ollama
 # from langchain.chains import create_retrieval_chain
 # from langchain.chains.combine_documents import create_stuff_documents_chain
+import psycopg2
 from langchain_google_genai import (
     ChatGoogleGenerativeAI,
     HarmBlockThreshold,
     HarmCategory,
 )
-from langchain_mixedbread_ai import MixedbreadAIRerank
-
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 from langchain.retrievers.document_compressors import CrossEncoderReranker
@@ -44,7 +43,8 @@ class EduBotCreator:
         self.model_type = MODEL_TYPE
         self.temperature = TEMPERATURE
         self.collection_name = COLLECTION_NAME
-    
+        self.pg_conn_params = PG_CONN_PARAMS
+
     def create_chat_prompt_1(self):
         chat_prompt_1 = ChatPromptTemplate.from_messages([
         SystemMessagePromptTemplate.from_template(self.system_prompt_template_1),
@@ -61,6 +61,48 @@ class EduBotCreator:
         ])
         return chat_prompt_2
     
+    def create_embedding_model_instance(self):
+        embedding_model = HuggingFaceEmbeddings(
+            model_name="mixedbread-ai/mxbai-embed-large-v1",
+            model_kwargs={'device': 'cpu'},
+            ) 
+        return embedding_model
+
+    def get_embedding(self, user_query):
+        
+        response = self.embedding_model
+
+        embedding = response.embed_query(user_query)
+
+        # Converting the embedding to the pgvector and returning it
+        return '[' + ','.join(map(str, embedding)) + ']'
+
+    def own_retriever(self, user_query):
+        conn = psycopg2.connect(**self.pg_conn_params)
+        cursor = conn.cursor()
+        
+        prompt_vector = self.get_embedding(user_query)
+        cursor.execute('SET max_parallel_workers_per_gather = 4')
+        cursor.execute(
+            'SELECT text,url '
+            'FROM madhav_news_scroll11 WHERE 1 - (embeddings_mxdbread <=> %(prompt_vector)s) >= %(match_threshold)s '
+            'ORDER BY embeddings_mxdbread <=> %(prompt_vector)s LIMIT %(match_cnt)s',
+            {'prompt_vector': prompt_vector, 'match_threshold': 0.2, 'match_cnt': 1}
+        )
+        result = cursor.fetchall()
+        return result
+
+    def format_docs_2(context, source):
+        formatted_docs = []
+        # Iterate over each document in the source list
+        for doc_content, doc_source in source:
+            # Format each document's page content and metadata
+            formatted_doc = f"context:\n```\n{doc_content}\n```\nsource:\n({doc_source})"
+            formatted_docs.append(formatted_doc)
+        # Join all formatted documents with two newlines
+        return "\n\n".join(formatted_docs)
+
+
     @staticmethod
     def format_docs(docs):
         formatted_docs = []
@@ -89,7 +131,7 @@ class EduBotCreator:
 
     def create_history_aware_retriever(self):
         try:
-            history_aware_retriever = self.chat_prompt_1 | self.llm | self.format_content | self.retriever
+            history_aware_retriever = self.chat_prompt_1 | self.llm | self.format_content | self.own_retriever
             return history_aware_retriever
         except Exception as e:
             st.error(f"error creating history aware retriever: {e}")
@@ -97,7 +139,7 @@ class EduBotCreator:
     def create_bot(self):
         try:
             rag_chain = (
-            {"chat_history":itemgetter("chat_history"), "context": self.history_aware_retriever | self.format_docs, "user_question": itemgetter("user_question")}
+            {"chat_history":itemgetter("chat_history"), "context": self.history_aware_retriever | self.format_docs_2, "user_question": itemgetter("user_question")}
             | self.chat_prompt_2 
             | self.llm
             )
@@ -115,21 +157,19 @@ class EduBotCreator:
         
         # })
         llm = ChatGroq(
-            model = "llama-3.1-70b-versatile",
+            # model = "llama-3.1-70b-versatile",
             # model="llama-3.1-8b-instant",
-            # model = "llama3-70b-8192",
+            model = "llama3-70b-8192",
             # model = "llama3-8b-8192",
             temperature = 0,
         )        
-        # llm = ChatCohere(temperature=0)
         return llm
     
     def load_vectorstore(self):
-        embeddings = CohereEmbeddings(model="embed-english-v3.0")
-        # embeddings = HuggingFaceEmbeddings(
-        #                     model_name = self.embedder,
-        #                     model_kwargs = {'trust_remote_code': True}
-        #                 )
+        embeddings = HuggingFaceEmbeddings(
+                            model_name = self.embedder,
+                            model_kwargs = {'trust_remote_code': True}
+                        )
         vectorstore = PGVector.from_existing_index(collection_name=self.collection_name,embedding=embeddings,connection=self.connection_string,)
         return vectorstore
     
@@ -137,9 +177,10 @@ class EduBotCreator:
     def create_edubot(self):
         self.chat_prompt_1 = self.create_chat_prompt_1()
         self.chat_prompt_2 = self.create_chat_prompt_2()
-        self.vectorstore = self.load_vectorstore()
+        # self.vectorstore = self.load_vectorstore()
+        self.embedding_model = self.create_embedding_model_instance()
         self.llm = self.load_llm()
-        self.retriever = self.vectorstore.as_retriever(search_type="similarity", search_kwargs=self.search_kwargs)
+        # self.retriever = self.vectorstore.as_retriever(search_type="similarity", search_kwargs=self.search_kwargs)
         self.history_aware_retriever = self.create_history_aware_retriever()
         self.bot = self.create_bot()
         return self.bot
