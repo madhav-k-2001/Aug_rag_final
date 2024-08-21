@@ -1,6 +1,5 @@
 import streamlit as st
 from dotenv import load_dotenv
-from langchain_core.callbacks.base import BaseCallbackHandler
 from streamlit_feedback import streamlit_feedback
 
 from config_pg import *
