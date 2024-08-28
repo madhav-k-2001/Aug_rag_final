@@ -1,7 +1,7 @@
 import streamlit as st
 from dotenv import load_dotenv
 from streamlit_feedback import streamlit_feedback
-
+from traceloop.sdk import Traceloop
 from config_pg import *
 from edubot_pg import EduBotCreator
 
@@ -30,6 +30,9 @@ def storenprintfb(dic):
 def main():
 
     load_dotenv()
+
+    Traceloop.init()
+    
     st.set_page_config(page_title="FAKE OR REAL")
 
     st.title("Misinfo Detector")
