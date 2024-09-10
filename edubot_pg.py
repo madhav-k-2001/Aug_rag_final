@@ -50,7 +50,7 @@ class EduBotCreator:
         self.search_kwargs = SEARCH_KWARGS
         self.embedder = EMBEDDER
         self.connection_string = CONNECTION_STRING
-        self.model_type = MODEL_TYPE
+        # self.model_type = MODEL_TYPE
         self.temperature = TEMPERATURE
         self.collection_name = COLLECTION_NAME
         self.pg_conn_params = pg_conn_params
