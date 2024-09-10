@@ -2,11 +2,11 @@
 # from langchain.chains import create_retrieval_chain
 # from langchain.chains.combine_documents import create_stuff_documents_chain
 import psycopg2
-from langchain_google_genai import (
-    ChatGoogleGenerativeAI,
-    HarmBlockThreshold,
-    HarmCategory,
-)
+# from langchain_google_genai import (
+#     ChatGoogleGenerativeAI,
+#     HarmBlockThreshold,
+#     HarmCategory,
+# )
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 from langchain.retrievers.document_compressors import CrossEncoderReranker
@@ -29,7 +29,17 @@ from langchain_groq import ChatGroq
 
 from config_pg import *
 
+import os
+import json
+from dotenv import load_dotenv
 
+# Load .env file
+load_dotenv()
+
+PG_CONN_PARAMS = os.getenv('PG_CONN_PARAMS')
+pg_conn_params = json.loads(PG_CONN_PARAMS)
+groq_api_key=os.getenv('GROQ_API_KEY')
+CONNECTION_STRING=os.getenv('CONNECTION_STRING')
 class EduBotCreator:
 
     def __init__(self):
@@ -43,7 +53,7 @@ class EduBotCreator:
         self.model_type = MODEL_TYPE
         self.temperature = TEMPERATURE
         self.collection_name = COLLECTION_NAME
-        self.pg_conn_params = PG_CONN_PARAMS
+        self.pg_conn_params = pg_conn_params
 
     def create_chat_prompt_1(self):
         chat_prompt_1 = ChatPromptTemplate.from_messages([
@@ -87,7 +97,7 @@ class EduBotCreator:
             'SELECT text,url '
             'FROM madhav_news_scroll11 WHERE 1 - (embeddings_mxdbread <=> %(prompt_vector)s) >= %(match_threshold)s '
             'ORDER BY embeddings_mxdbread <=> %(prompt_vector)s LIMIT %(match_cnt)s',
-            {'prompt_vector': prompt_vector, 'match_threshold': 0.2, 'match_cnt': 1}
+            {'prompt_vector': prompt_vector, 'match_threshold': 0.4, 'match_cnt': 2}
         )
         result = cursor.fetchall()
         return result
@@ -161,7 +171,7 @@ class EduBotCreator:
             # model="llama-3.1-8b-instant",
             model = "llama3-70b-8192",
             # model = "llama3-8b-8192",
-            temperature = 0,
+            temperature = 0
         )        
         return llm
     
