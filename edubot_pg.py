@@ -3,11 +3,11 @@
 # from langchain.chains.combine_documents import create_stuff_documents_chain
 from sentence_transformers import SentenceTransformer
 import psycopg2
-from langchain_google_genai import (
-    ChatGoogleGenerativeAI,
-    HarmBlockThreshold,
-    HarmCategory,
-)
+# from langchain_google_genai import (
+#     ChatGoogleGenerativeAI,
+#     HarmBlockThreshold,
+#     HarmCategory,
+# )
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 from langchain.retrievers.document_compressors import CrossEncoderReranker
@@ -29,6 +29,15 @@ from langchain.retrievers.contextual_compression import ContextualCompressionRet
 from langchain_groq import ChatGroq
 
 from config_pg import *
+import os
+import json
+from dotenv import load_dotenv
+
+load_dotenv()
+
+PG_CONN_params = os.getenv('PG_CONN_PARAMS')
+PG_CONN_PARAMS = json.loads(PG_CONN_params)
+CONNECTION_STRING=os.getenv('CONNECTION_STRING')
 
 
 class EduBotCreator:
@@ -64,7 +73,7 @@ class EduBotCreator:
     
     def create_embedding_model_instance(self):
         embedding_model = SentenceTransformer(
-            "mixedbread-ai/mxbai-embed-large-v1"
+            "mixedbread-ai/mxbai-embed-large-v1",device='cpu'
             ) 
         return embedding_model
 
@@ -87,7 +96,7 @@ class EduBotCreator:
             'SELECT text,url '
             'FROM madhav_news_scroll11 WHERE 1 - (embeddings_mxdbread <=> %(prompt_vector)s) >= %(match_threshold)s '
             'ORDER BY embeddings_mxdbread <=> %(prompt_vector)s LIMIT %(match_cnt)s',
-            {'prompt_vector': prompt_vector, 'match_threshold': 0.2, 'match_cnt': 1}
+            {'prompt_vector': prompt_vector, 'match_threshold': 0.4, 'match_cnt': 2}
         )
         result = cursor.fetchall()
         return result

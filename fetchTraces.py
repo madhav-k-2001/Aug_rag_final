@@ -4,7 +4,7 @@ import csv
 langfuse = Langfuse(
   secret_key="sk-lf-22b46cb9-5a7c-40fb-86a2-5ae3bf4eda37",
   public_key="pk-lf-2aeebf3b-35bf-448a-9605-eca1f8644d51",
-  host="http://localhost:3000"  # 🇪🇺 EU region
+  host="http://172.24.18.13:3000"  # 🇪🇺 EU region
   # host="https://us.cloud.langfuse.com" # 🇺🇸 US region
 )
  
@@ -12,7 +12,7 @@ langfuse = Langfuse(
 traces = langfuse.fetch_traces()
 csv_data = []
 for trace in traces.data:
-    csv_data.append({
+        csv_data.append({
         "timestamp": trace.timestamp.isoformat(),
         "input": trace.input["user_question"],
         "output": trace.output["content"]

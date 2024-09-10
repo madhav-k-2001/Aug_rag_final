@@ -82,12 +82,4 @@ MODEL_CKPT = "/home/sets/PycharmProjects/llm/mistral_chatbot/llama-2-7b-chat.ggm
 MODEL_TYPE = "gemini-1.5-flash"
 MAX_NEW_TOKENS = 512
 TEMPERATURE = 0
-CONNECTION_STRING = "postgresql+psycopg2://postgres:sets1234@172.24.18.37:5432/Madhav_db"
 
-PG_CONN_PARAMS = {
-    'dbname': 'my_firstdb',
-    'user': 'postgres',
-    'password': 'sets1234',
-    'host': '172.24.18.37',
-    'port': '5432'
-}
