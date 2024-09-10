@@ -13,3 +13,4 @@ python-dotenv
 langchain_cohere
 langchain_postgres
 psycopg2
+langfuse

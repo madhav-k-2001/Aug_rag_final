@@ -1,6 +1,7 @@
 # from langchain_community.llms import Ollama
 # from langchain.chains import create_retrieval_chain
 # from langchain.chains.combine_documents import create_stuff_documents_chain
+from sentence_transformers import SentenceTransformer
 import psycopg2
 # from langchain_google_genai import (
 #     ChatGoogleGenerativeAI,
@@ -28,6 +29,15 @@ from langchain.retrievers.contextual_compression import ContextualCompressionRet
 from langchain_groq import ChatGroq
 
 from config_pg import *
+import os
+import json
+from dotenv import load_dotenv
+
+load_dotenv()
+
+PG_CONN_params = os.getenv('PG_CONN_PARAMS')
+PG_CONN_PARAMS = json.loads(PG_CONN_params)
+CONNECTION_STRING=os.getenv('CONNECTION_STRING')
 
 import os
 import json
@@ -72,9 +82,8 @@ class EduBotCreator:
         return chat_prompt_2
     
     def create_embedding_model_instance(self):
-        embedding_model = HuggingFaceEmbeddings(
-            model_name="mixedbread-ai/mxbai-embed-large-v1",
-            model_kwargs={'device': 'cpu'},
+        embedding_model = SentenceTransformer(
+            "mixedbread-ai/mxbai-embed-large-v1",device='cpu'
             ) 
         return embedding_model
 
@@ -82,7 +91,7 @@ class EduBotCreator:
         
         response = self.embedding_model
 
-        embedding = response.embed_query(user_query)
+        embedding = response.encode(user_query)
 
         # Converting the embedding to the pgvector and returning it
         return '[' + ','.join(map(str, embedding)) + ']'
