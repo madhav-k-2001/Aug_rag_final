@@ -1,23 +1,24 @@
 # from langchain_community.llms import Ollama
 # from langchain.chains import create_retrieval_chain
 # from langchain.chains.combine_documents import create_stuff_documents_chain
-from sentence_transformers import SentenceTransformer
-import psycopg2
 # from langchain_google_genai import (
 #     ChatGoogleGenerativeAI,
 #     HarmBlockThreshold,
 #     HarmCategory,
 # )
+# from langchain_cohere import (
+#     CohereEmbeddings,   
+#     CohereRerank,
+#     # ChatCohere
+# )
+from langchain.schema import StrOutputParser
+from sentence_transformers import SentenceTransformer
+import psycopg2
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 from langchain.retrievers.document_compressors import CrossEncoderReranker
 from operator import itemgetter
 import streamlit as st
-from langchain_cohere import (
-    CohereEmbeddings,   
-    CohereRerank,
-    # ChatCohere
-)
 from langchain_core.prompts import (
     ChatPromptTemplate,
     MessagesPlaceholder, 
@@ -29,15 +30,6 @@ from langchain.retrievers.contextual_compression import ContextualCompressionRet
 from langchain_groq import ChatGroq
 
 from config_pg import *
-import os
-import json
-from dotenv import load_dotenv
-
-load_dotenv()
-
-PG_CONN_params = os.getenv('PG_CONN_PARAMS')
-PG_CONN_PARAMS = json.loads(PG_CONN_params)
-CONNECTION_STRING=os.getenv('CONNECTION_STRING')
 
 import os
 import json
@@ -50,6 +42,7 @@ PG_CONN_PARAMS = os.getenv('PG_CONN_PARAMS')
 pg_conn_params = json.loads(PG_CONN_PARAMS)
 groq_api_key=os.getenv('GROQ_API_KEY')
 CONNECTION_STRING=os.getenv('CONNECTION_STRING')
+
 class EduBotCreator:
 
     def __init__(self):
@@ -150,7 +143,7 @@ class EduBotCreator:
 
     def create_history_aware_retriever(self):
         try:
-            history_aware_retriever = self.chat_prompt_1 | self.llm | self.format_content | self.own_retriever
+            history_aware_retriever = self.chat_prompt_1 | self.llm | StrOutputParser() | self.own_retriever
             return history_aware_retriever
         except Exception as e:
             st.error(f"error creating history aware retriever: {e}")
@@ -158,9 +151,10 @@ class EduBotCreator:
     def create_bot(self):
         try:
             rag_chain = (
-            {"chat_history":itemgetter("chat_history"), "context": self.history_aware_retriever | self.format_docs_2, "user_question": itemgetter("user_question")}
+            {"chat_history":itemgetter("chat_history"), "context": self.history_aware_retriever | self.format_docs_2, "input": itemgetter("input")}
             | self.chat_prompt_2 
             | self.llm
+            | StrOutputParser()
             )
             return rag_chain
         except Exception as e:

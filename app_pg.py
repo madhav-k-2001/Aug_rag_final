@@ -12,17 +12,17 @@ def create_edubot():
     edubot = edubotcreator.create_edubot()
     return edubot
 
-def handle_userinput(user_question):
+def handle_userinput(input):
     
     full_response = ""
     
     chat_history_str = EduBotCreator.format_chat_history(st.session_state.chat_history)
 
-    for chunk in st.session_state.edubot.stream({"user_question":user_question, "chat_history": st.session_state.chat_history, "chat_history_str": chat_history_str},config={"callbacks": [langfuse_handler]}):
-        full_response += chunk.content
-        yield chunk.content
+    for chunk in st.session_state.edubot.stream({"input":input, "chat_history": st.session_state.chat_history, "chat_history_str": chat_history_str},config={"callbacks": [langfuse_handler]}):
+        full_response += chunk
+        yield chunk
 
-    st.session_state.chat_history.append({"role": "human", "content": user_question})
+    st.session_state.chat_history.append({"role": "human", "content": input})
     st.session_state.chat_history.append({"role": "assistant", "content": full_response})
     
 def storenprintfb(dic):
@@ -47,15 +47,15 @@ def main():
             st.markdown(message["content"])
 
 
-    user_question = st.chat_input("Enter the info")
+    input = st.chat_input("Enter the info")
 
-    if user_question and st.session_state.edubot:
+    if input and st.session_state.edubot:
         
         with st.chat_message("user"):
-            st.markdown(user_question)
+            st.markdown(input)
 
         with st.chat_message("assistant"):
-            st.write_stream(handle_userinput(user_question))
+            st.write_stream(handle_userinput(input))
         
         
         # Keep only the latest 2 sets of conversation in the chat history

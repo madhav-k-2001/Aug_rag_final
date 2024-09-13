@@ -32,7 +32,7 @@ Chat History:
 ```{chat_history_str}```
 
 
-User's Latest Question: <{user_question}>
+User's Latest Question: <{input}>
 
 
 Provide the appropriate query as a single line of text without any additional words or explanations.
@@ -68,7 +68,7 @@ Context:
 """
 
 HUMAN_PROMPT_TEMPLATE_2 = """
-User's Question: <{user_question}>
+User's Question: <{input}>
 
 
 Please provide an answer based on the given context and considering the chat history if relevant.

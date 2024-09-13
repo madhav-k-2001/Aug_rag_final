@@ -12,15 +12,18 @@ langfuse = Langfuse(
 traces = langfuse.fetch_traces()
 csv_data = []
 for trace in traces.data:
-        csv_data.append({
+    # Ensure output is a dictionary and has "content"
+    output_content = trace.output["content"] if isinstance(trace.output, dict) and "content" in trace.output else "No content or error"
+    
+    csv_data.append({
         "timestamp": trace.timestamp.isoformat(),
-        "input": trace.input["user_question"],
-        "output": trace.output["content"]
+        "user_question": trace.input["user_question"],
+        "output_content": output_content
     })
 
 # Writing the extracted data to a CSV file
-csv_columns = ['timestamp', 'input', 'output']
-csv_file = "Traces.csv"
+csv_columns = ['timestamp', 'user_question', 'output_content']
+csv_file = "traces.csv"
 
 try:
     with open(csv_file, 'w', newline='', encoding='utf-8') as csvfile:
