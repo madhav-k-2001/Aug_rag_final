@@ -61,6 +61,7 @@ class EduBotCreator:
     def create_chat_prompt_1(self):
         chat_prompt_1 = ChatPromptTemplate.from_messages([
         SystemMessagePromptTemplate.from_template(self.system_prompt_template_1),
+        MessagesPlaceholder(variable_name="chat_history"),
         HumanMessagePromptTemplate.from_template(self.human_prompt_template_1)
         ])
         return chat_prompt_1

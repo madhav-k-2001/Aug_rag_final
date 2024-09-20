@@ -24,14 +24,10 @@ CRITICAL: Your output must consist ONLY of the original question (if standalone)
 Do not include any explanations, introductions, or additional text.
 The output should be a single line of text without any formatting or delimiters.
 
-The chat history is delimited by triple backticks and the user's latest question is delimited by angle brackets."
+The user's latest question is delimited by angle brackets."
 """
 
 HUMAN_PROMPT_TEMPLATE_1 = """
-Chat History:
-```{chat_history_str}```
-
-
 User's Latest Question: <{input}>
 
 

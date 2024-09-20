@@ -4,8 +4,17 @@ from streamlit_feedback import streamlit_feedback
 from config_pg import *
 from edubot_pg import EduBotCreator
 from langfuse.callback import CallbackHandler
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_community.chat_message_histories import StreamlitChatMessageHistory
+import uuid
+from langfuse import Langfuse
+from streamlit_feedback import streamlit_feedback
+
+
+run_id = uuid.uuid4()
 
 langfuse_handler = CallbackHandler()
+
 
 def create_edubot():
     edubotcreator = EduBotCreator()
@@ -14,19 +23,8 @@ def create_edubot():
 
 def handle_userinput(input):
     
-    full_response = ""
-    
-    chat_history_str = EduBotCreator.format_chat_history(st.session_state.chat_history)
-
-    for chunk in st.session_state.edubot.stream({"input":input, "chat_history": st.session_state.chat_history, "chat_history_str": chat_history_str},config={"callbacks": [langfuse_handler]}):
-        full_response += chunk
+    for chunk in st.session_state.chain_with_history.stream({"input": input}, config = {"configurable": {"session_id": "any"}, "callbacks":[langfuse_handler], "run_id": run_id}):
         yield chunk
-
-    st.session_state.chat_history.append({"role": "human", "content": input})
-    st.session_state.chat_history.append({"role": "assistant", "content": full_response})
-    
-def storenprintfb(dic):
-    st.markdown(dic)
 
 def main():
 
@@ -36,33 +34,39 @@ def main():
 
     st.title("Misinfo Detector")
 
-    if "edubot" not in st.session_state:
-        st.session_state.edubot = create_edubot()
+    msgs = StreamlitChatMessageHistory(key="session_key")
 
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = []
+    if "chain_with_history" not in st.session_state:
+        edubot = create_edubot()
 
-    for message in st.session_state.chat_history:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+        st.session_state.chain_with_history = RunnableWithMessageHistory(
+        edubot,
+        lambda session_id: msgs,  # Always return the instance created earlier
+        input_messages_key="input",
+        history_messages_key="chat_history",
+        )
+
+    for msg in msgs.messages:
+        with st.chat_message(msg.type):
+            st.markdown(msg.content)
+
 
 
     input = st.chat_input("Enter the info")
 
-    if input and st.session_state.edubot:
+    if input and st.session_state.chain_with_history:
         
         with st.chat_message("user"):
             st.markdown(input)
 
         with st.chat_message("assistant"):
             st.write_stream(handle_userinput(input))
+
+
+
         
         
-        # Keep only the latest 2 sets of conversation in the chat history
-        st.session_state.chat_history = st.session_state.chat_history[-6:]
-
-
-
+        
 if __name__ == "__main__":
     main()
     
