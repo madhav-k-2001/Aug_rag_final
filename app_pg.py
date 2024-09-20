@@ -6,15 +6,17 @@ from edubot_pg import EduBotCreator
 from langfuse.callback import CallbackHandler
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_community.chat_message_histories import StreamlitChatMessageHistory
+from langchain_core.tracers.context import collect_runs
 import uuid
 from langfuse import Langfuse
 from streamlit_feedback import streamlit_feedback
 
+if 'fbk' not in st.session_state:
+        st.session_state.fbk = str(uuid.uuid4())
 
 run_id = uuid.uuid4()
 
 langfuse_handler = CallbackHandler()
-
 
 def create_edubot():
     edubotcreator = EduBotCreator()
@@ -22,9 +24,29 @@ def create_edubot():
     return edubot
 
 def handle_userinput(input):
-    
-    for chunk in st.session_state.chain_with_history.stream({"input": input}, config = {"configurable": {"session_id": "any"}, "callbacks":[langfuse_handler], "run_id": run_id}):
-        yield chunk
+    with collect_runs() as cb:
+        for chunk in st.session_state.chain_with_history.stream({"input": input}, config = {"configurable": {"session_id": "any"}, "callbacks":[langfuse_handler]}):
+            yield chunk
+        st.session_state.run_id = cb.traced_runs[0].id
+
+
+def fbcb(feedback):
+    # st.write(feedback)
+   
+    score_mappings = {
+        "thumbs": {"👍": 1, "👎": 0},
+    }
+    scores = score_mappings["thumbs"]
+    score = scores.get(feedback["score"])
+
+    langfuse_client = Langfuse()
+    langfuse_client.score(
+        trace_id=str(st.session_state.run_id),
+        name="user-explicit-feedback",
+        value=score,
+        comment=feedback.get("text")
+    )
+    st.session_state.fbk = str(uuid.uuid4())
 
 def main():
 
@@ -35,7 +57,7 @@ def main():
     st.title("Misinfo Detector")
 
     msgs = StreamlitChatMessageHistory(key="session_key")
-
+    
     if "chain_with_history" not in st.session_state:
         edubot = create_edubot()
 
@@ -61,7 +83,13 @@ def main():
 
         with st.chat_message("assistant"):
             st.write_stream(handle_userinput(input))
-
+    
+    streamlit_feedback(
+        feedback_type="thumbs",
+        optional_text_label="[Optional]",
+        key=st.session_state.fbk,
+        on_submit=fbcb
+    )
 
 
         
