@@ -12,9 +12,10 @@ from langfuse import Langfuse
 from streamlit_feedback import streamlit_feedback
 
 if 'fbk' not in st.session_state:
-        st.session_state.fbk = str(uuid.uuid4())
+    st.session_state.fbk = str(uuid.uuid4())
 
-run_id = uuid.uuid4()
+if 'run_id' not in st.session_state:
+    st.session_state.run_id = None
 
 langfuse_handler = CallbackHandler()
 
@@ -84,12 +85,13 @@ def main():
         with st.chat_message("assistant"):
             st.write_stream(handle_userinput(input))
     
-    streamlit_feedback(
-        feedback_type="thumbs",
-        optional_text_label="[Optional]",
-        key=st.session_state.fbk,
-        on_submit=fbcb
-    )
+    if st.session_state.run_id:
+        streamlit_feedback(
+            feedback_type="thumbs",
+            optional_text_label="[Optional]",
+            key=st.session_state.fbk,
+            on_submit=fbcb
+        )
 
 
         
