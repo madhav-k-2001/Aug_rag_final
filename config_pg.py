@@ -24,15 +24,11 @@ CRITICAL: Your output must consist ONLY of the original question (if standalone)
 Do not include any explanations, introductions, or additional text.
 The output should be a single line of text without any formatting or delimiters.
 
-The chat history is delimited by triple backticks and the user's latest question is delimited by angle brackets."
+The user's latest question is delimited by angle brackets."
 """
 
 HUMAN_PROMPT_TEMPLATE_1 = """
-Chat History:
-```{chat_history_str}```
-
-
-User's Latest Question: <{user_question}>
+User's Latest Question: <{input}>
 
 
 Provide the appropriate query as a single line of text without any additional words or explanations.
@@ -68,7 +64,7 @@ Context:
 """
 
 HUMAN_PROMPT_TEMPLATE_2 = """
-User's Question: <{user_question}>
+User's Question: <{input}>
 
 
 Please provide an answer based on the given context and considering the chat history if relevant.
