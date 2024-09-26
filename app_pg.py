@@ -17,7 +17,7 @@ if 'fbk' not in st.session_state:
 if 'run_id' not in st.session_state:
     st.session_state.run_id = None
 
-langfuse_handler = CallbackHandler()
+langfuse_handler = CallbackHandler(user_id="madhav")
 
 def create_edubot():
     edubotcreator = EduBotCreator()
